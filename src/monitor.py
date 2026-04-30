@@ -1,7 +1,7 @@
 import psutil
 import time
 from datetime import date, timedelta
-from storage import update_storage,get_bandwith_data,get_presets
+from src.storage import update_storage,get_bandwith_data,get_presets
 
 
 def check_cap(total_mb):

@@ -1,6 +1,6 @@
 
-from config import user_presets
-from storage import get_bandwith_data,get_presets
+from src.config import user_presets
+from src.storage import get_bandwith_data,get_presets
 from datetime import date
 from rich.console import Console
 from rich.table import Table

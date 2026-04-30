@@ -9,6 +9,7 @@ __pycache__/
 
 # JSON data files
 *.json
+storage
 
 # Environment variables
 .env
