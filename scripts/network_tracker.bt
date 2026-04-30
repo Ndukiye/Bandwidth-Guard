@@ -1,0 +1,38 @@
+//BEGIN {printf("Tracking TCP and UDP bandwidth per process...\n")}
+
+kprobe:tcp_sendmsg
+{
+    @send_bytes[pid,comm]+=arg2;
+}
+
+kprobe:tcp_recvmsg
+{
+    @recv_bytes[pid,comm]+=arg2;
+}
+
+kprobe:udp_sendmsg
+{
+    @send_bytes[pid,comm]+=arg2;54
+}
+
+kprobe:udp_recvmsg
+{
+    @recv_bytes[pid,comm]+=arg2;
+}
+
+interval:s:5
+{
+   // printf("\n=== Last 5 seconds ===\n");
+    printf("SENT:\n");
+    print(@send_bytes);
+    printf("\nRECEIVED:\n");
+    print(@recv_bytes);
+
+    clear(@send_bytes);
+    clear(@recv_bytes);
+}
+
+END
+{
+    printf("\nStopped tracking.\n");
+}

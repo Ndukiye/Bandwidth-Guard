@@ -8,7 +8,7 @@ from rich.panel import Panel
 from rich.progress import Progress, BarColumn, TextColumn
 
 console = Console()
-
+#Display data usage details
 def display_usage(data,presets):
     if not data:
         print("[bold red]No bandwidth data yet. Monitor must be running.[/bold red]")
