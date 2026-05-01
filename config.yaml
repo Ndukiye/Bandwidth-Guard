@@ -1,0 +1,29 @@
+# config.yaml (put in project root)
+
+# System-wide daily limit (fallback)
+global:
+  daily_limit_mb: 5120  # 5GB
+  
+# Per-process limits
+processes:
+  firefox:
+    limit_mb: 2048  # 2GB
+    action: kill     # warn | kill
+  
+  chrome:
+    limit_mb: 1024
+    action: kill
+  
+  spotify:
+    limit_mb: 500
+    action: warn  # Just notify, don't kill
+  
+  code:
+    limit_mb: 70
+    action: warn  # Just notify, don't kill
+
+# Processes to never enforce on
+whitelist:
+  - sshd
+  - systemd
+  - snapd

@@ -1,7 +1,9 @@
 import json
-data_file_path = "storage/data.json"
-presets_file_path = "storage/user-presets.json"
-multi_process_tracker_path = "storage/multi_tracker.json"
+from pathlib import Path
+BASE_DIR = Path(__file__).resolve().parent.parent
+data_file_path = BASE_DIR/"storage/data.json"
+presets_file_path = BASE_DIR/"storage/user-presets.json"
+multi_process_tracker_path = BASE_DIR/"storage/multi_tracker.json"
 paths = [data_file_path,presets_file_path]
 
 for path in paths:
@@ -34,3 +36,11 @@ def get_presets():
 def update_multi_tracker(new_data):
     with open(multi_process_tracker_path,"w") as file:
         json.dump(new_data,file,indent=4)
+
+def load_multi_tracker_data():
+    try:
+        with open(multi_process_tracker_path, "r") as file:
+            data = json.load(file)      
+    except FileNotFoundError:
+        data = {}
+    return data
