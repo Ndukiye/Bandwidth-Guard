@@ -59,20 +59,33 @@ def normalize_bpftrace_line(line):
     pid = int(line.split("]")[0].split("[")[1].split(",")[0])
     comm = line.split("]")[0].split("[")[1].split(",")[1].strip()
     mb_used = int(line.split(":")[1]) / (1024 * 1024)
-    
-    MAJOR_APPS = {'firefox', 'chrome', 'spotify', 'code', 'slack', 'teams'}
-    
-    try:
+
+    try: 
         proc = psutil.Process(pid)
-        parent = proc.parent()
-        if parent and parent.name() in MAJOR_APPS:
-            name = parent.name()  # Bundle into parent
+        owner = get_process_owner(pid)
+        if owner:
+            name = owner # Bundle into parent
         else:
             name = proc.name()  # Use own name
-    except (psutil.AccessDenied, psutil.NoSuchProcess):
-        name = comm
-    
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+            name = comm
     return {"megabytes": mb_used, "name": name}
+
+def get_process_owner(pid):
+    MAJOR_APPS = {'firefox', 'chrome', 'spotify', 'code'}
+
+    for proc in psutil.process_iter(['pid', 'name']):
+        try:
+            if proc.info['name'] not in MAJOR_APPS:
+                continue
+            children = proc.children(recursive=True)
+            child_pids = {child.pid for child in children}
+
+            if pid in child_pids or pid == proc.pid:
+                return proc.info['name']
+        except (psutil.AccessDenied, psutil.NoSuchProcess):
+            continue
+    return None
 
 def check_and_enforce(process_name):
     #Check if process exceeded limit and enforce

@@ -1,4 +1,3 @@
-# storage.py (UPDATED)
 import json
 from pathlib import Path
 from datetime import date, timedelta
@@ -26,14 +25,6 @@ def update_storage(new_data):
 
 def get_bandwith_data():
     with open(data_file_path, "r") as file:
-        return json.load(file)
-
-def save_presets(presets):
-    with open(presets_file_path, "w") as file:
-        json.dump(presets, file, indent=4)
-
-def get_presets():
-    with open(presets_file_path, "r") as file:
         return json.load(file)
 
 # === Per-process history tracking ===
@@ -125,15 +116,3 @@ def cleanup_old_history(days_to_keep=30):
     }
     
     save_history(cleaned)
-
-# Legacy functions for backward compatibility
-def load_multi_tracker_data():
-    """Load today's data (backward compatible)"""
-    return get_today_usage()
-
-def update_multi_tracker(new_data):
-    """Update today's data (backward compatible)"""
-    history = load_history()
-    today = get_today_str()
-    history[today] = new_data
-    save_history(history)

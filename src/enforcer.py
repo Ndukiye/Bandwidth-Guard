@@ -1,7 +1,8 @@
+#enforcer.py
 import psutil
 import subprocess
 import time 
-from storage import get_presets
+from config_loader import load_enforcement_config
 MAJOR_APPS = {'firefox', 'chrome', 'spotify', 'code', 'teams'}
 
 # Track what we've already notified about
@@ -123,19 +124,24 @@ def enforce_limit(process_name, usage_mb, limit_mb, action="kill"):
         reset_notification_state(process_name)
 
 #enforce global limit
+# enforcer.py - REPLACE check_cap()
+
 def check_cap(total_mb):
-    presets = get_presets()
-    if not presets:
+    config = load_enforcement_config()
+    global_config = config.get('global', {})
+    
+    if 'daily_limit_mb' not in global_config:
         return False
-    cap = float(presets[0]["usage_limits"])
+    
+    cap = float(global_config['daily_limit_mb'])
     percentage = (total_mb / cap) * 100
+    
     if percentage >= 90:
         if should_notify("Global_system_99", "warn_90"):
             notify_user(
                 '⚠️ System Network Usage Warning',
-                f'System Network Usage at {percentage:.0f}% of limit ({total_mb:.0f}MB / {cap}MB)',
+                f'System at {percentage:.0f}% of limit ({total_mb:.0f}MB / {cap}MB)',
                 urgency="critical"
-            )   
-    if total_mb >= cap: return True
-    return False
-
+            )
+    
+    return total_mb >= cap
