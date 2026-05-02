@@ -1,11 +1,7 @@
-# enforcer.py (UPDATED)
-
-from storage import load_multi_tracker_data
 import psutil
-import os
-import signal
 import subprocess
-
+import time 
+from storage import get_presets
 MAJOR_APPS = {'firefox', 'chrome', 'spotify', 'code', 'teams'}
 
 # Track what we've already notified about
@@ -49,27 +45,33 @@ def notify_user(title, message, urgency="normal"):
         f'{message}'
     ])
 
+
+notified_state = {}  # process_name → {'level': str, 'timestamp': float}
 def should_notify(process_name, level):
     """
-    Check if we should send notification
-    Only notify once per level to avoid spam
-    
-    Args:
-        process_name: Name of process
-        level: "warn_80" | "kill_100"
-    
-    Returns:
-        bool: True if should notify
+    Check if we should send notification/take action
+    Resets after 3 minutes to allow re-enforcement
     """
-    global notified_state
+    RESET_INTERVAL = 180  # 3 minutes in seconds
     
-    last_level = notified_state.get(process_name)
+    current_time = time.time()
     
-    if last_level != level:
-        notified_state[process_name] = level
-        return True
+    if process_name in notified_state:
+        last_action = notified_state[process_name]
+        
+        # Check if same level and within reset interval
+        if last_action['level'] == level:
+            time_since_last = current_time - last_action['timestamp']
+            
+            if time_since_last < RESET_INTERVAL:
+                return False  # Too soon, don't notify again
     
-    return False
+    # Either new level or enough time passed - take action
+    notified_state[process_name] = {
+        'level': level,
+        'timestamp': current_time
+    }
+    return True
 
 def reset_notification_state(process_name):
     """Reset notification state (call when usage drops below threshold)"""
@@ -77,15 +79,8 @@ def reset_notification_state(process_name):
         del notified_state[process_name]
 
 def enforce_limit(process_name, usage_mb, limit_mb, action="kill"):
-    """
-    Enforce bandwidth limit on process
+    # Enforce bandwidth limit on process
     
-    Args:
-        process_name: Name of process
-        usage_mb: Current total usage in MB
-        limit_mb: Configured limit in MB
-        action: "warn" | "kill"
-    """
     if not limit_mb:
         return  # No limit configured
     
@@ -126,3 +121,21 @@ def enforce_limit(process_name, usage_mb, limit_mb, action="kill"):
     # Below 80% - reset notification state
     else:
         reset_notification_state(process_name)
+
+#enforce global limit
+def check_cap(total_mb):
+    presets = get_presets()
+    if not presets:
+        return False
+    cap = float(presets[0]["usage_limits"])
+    percentage = (total_mb / cap) * 100
+    if percentage >= 90:
+        if should_notify("Global_system_99", "warn_90"):
+            notify_user(
+                '⚠️ System Network Usage Warning',
+                f'System Network Usage at {percentage:.0f}% of limit ({total_mb:.0f}MB / {cap}MB)',
+                urgency="critical"
+            )   
+    if total_mb >= cap: return True
+    return False
+
