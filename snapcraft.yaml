@@ -10,8 +10,7 @@ description: |
   - Historical usage reports
 
 grade: stable
-confinement: classic  # Required for eBPF + root access
-
+confinement: classic
 base: core22
 
 apps:
@@ -34,17 +33,17 @@ apps:
 
 parts:
   bandwidth-guard:
-    plugin: python
+    plugin: dump
     source: .
-    requirements:
-      - requirements.txt
+    build-packages:
+      - python3-pip
     stage-packages:
       - bpftrace
       - python3-psutil
       - python3-yaml
       - libnotify-bin
+
     override-build: |
-      craftctl default
-      # Copy bpftrace scripts
-      mkdir -p $CRAFT_PART_INSTALL/scripts
-      cp scripts/*.bt $CRAFT_PART_INSTALL/scripts/
+      pip3 install --no-cache-dir -r requirements.txt --target $SNAPCRAFT_PART_INSTALL
+      mkdir -p $SNAPCRAFT_PART_INSTALL/scripts
+      cp scripts/*.bt $SNAPCRAFT_PART_INSTALL/scripts/
