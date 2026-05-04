@@ -1,49 +1,32 @@
 name: bandwidth-guard
 version: '1.0'
-summary: eBPF-based per-process bandwidth monitoring
+summary: eBPF bandwidth monitoring
 description: |
-  Monitor and enforce bandwidth limits on a per-process basis using eBPF.
-  Features:
-  - Real-time per-process network tracking
-  - Configurable bandwidth limits
-  - Desktop notifications
-  - Historical usage reports
-
+  Monitor network bandwidth per process using eBPF.
+  Requires daemon installed separately via install.sh.
+title: Bandwidth Guard
+license: MIT
+contact: orukariandukiye@gmail.com
 grade: stable
 confinement: classic
 base: core22
 
 apps:
-  bandwidth-guard:
-    command: bin/python3 $SNAP/main.py
-    daemon: simple
-    plugs:
-      - network
-      - network-bind
-      - system-observe
-      - process-control
-      - desktop
-
   bwguard:
-    command: bin/python3 $SNAP/main.py
-    plugs:
-      - network
-      - network-bind
-      - system-observe
+    command: venv/bin/python $SNAP/src/main.py
+  bandwidth-guard:
+    command: venv/bin/python $SNAP/src/main.py
+    aliases:
+      - bwguard
 
 parts:
   bandwidth-guard:
     plugin: dump
     source: .
     build-packages:
+      - python3-venv
       - python3-pip
-    stage-packages:
-      - bpftrace
-      - python3-psutil
-      - python3-yaml
-      - libnotify-bin
-
     override-build: |
-      pip3 install --no-cache-dir -r requirements.txt --target $SNAPCRAFT_PART_INSTALL
-      mkdir -p $SNAPCRAFT_PART_INSTALL/scripts
-      cp scripts/*.bt $SNAPCRAFT_PART_INSTALL/scripts/
+      craftctl default
+      python3 -m venv $CRAFT_PART_INSTALL/venv
+      $CRAFT_PART_INSTALL/venv/bin/pip install -r requirements.txt

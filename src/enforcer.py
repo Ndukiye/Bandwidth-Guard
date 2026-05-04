@@ -3,6 +3,7 @@ import psutil
 import subprocess
 import time 
 from config_loader import load_enforcement_config
+import os
 MAJOR_APPS = {'firefox', 'chrome', 'spotify', 'code', 'teams'}
 
 # Track what we've already notified about
@@ -37,14 +38,41 @@ def kill_process(process_pids):
 
 def notify_user(title, message, urgency="normal"):
     """Send desktop notification"""
-    subprocess.run([
-        "notify-send",
-        "-a", "Bandwidth-Guard",
-        "-c", "network",
-        "-u", f'{urgency}',
-        f'{title}',
-        f'{message}'
-    ])
+    
+    # Try to find user's display
+    display = None
+    dbus_address = None
+    
+    # Check common user UIDs (1000-1010)
+    for uid in range(1000, 1011):
+        display_file = f"/run/user/{uid}/display"
+        dbus_file = f"/run/user/{uid}/bus"
+        
+        if os.path.exists(dbus_file):
+            display = ":0"
+            dbus_address = f"unix:path=/run/user/{uid}/bus"
+            break
+    
+    if not dbus_address:
+        # Can't send notification, just log
+        print(f"[Notification] {title}: {message}")
+        return
+    
+    # Send notification to user's session
+    env = os.environ.copy()
+    env['DISPLAY'] = display
+    env['DBUS_SESSION_BUS_ADDRESS'] = dbus_address
+    
+    try:
+        subprocess.run([
+            "notify-send",
+            "-a", "Bandwidth-Guard",
+            "-u", urgency,
+            title,
+            message
+        ], env=env, timeout=5)
+    except Exception as e:
+        print(f"[Notification failed] {title}: {message} ({e})")
 
 
 notified_state = {}  # process_name → {'level': str, 'timestamp': float}

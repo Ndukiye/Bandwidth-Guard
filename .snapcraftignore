@@ -1,0 +1,15 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+config.yaml
+
+parts/
+stage/
+prime/
+*.snap
+
+scripts/*.service
+src/monitor.py
+src/enforcer.py

@@ -182,6 +182,7 @@ bandwidth-guard/
 │   └── config_loader.py        # Config management
 │
 ├── scripts/
+│   ├── bandwidth-guard.service # systemd file for running monitor.py      
 │   └── network_tracker.bt      # eBPF/bpftrace script
 │
 ├── storage/

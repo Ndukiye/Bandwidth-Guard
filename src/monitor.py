@@ -1,8 +1,7 @@
-import psutil
-import time
-from datetime import date, timedelta
+#monitor.py
+import socket
+from datetime import date
 from storage import update_storage,get_bandwith_data
-import subprocess
 import psutil
 from collections import defaultdict
 from storage import get_today_usage, update_today_usage
@@ -11,6 +10,15 @@ from enforcer import enforce_limit,check_cap
 from pathlib import Path
 import asyncio
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def is_connected():
+    try:
+        socket.create_connection(("8.8.8.8", 53), timeout=3)
+        return True
+    except OSError:
+        return False
+
 
 def save_bandwith_data(total_mb,cap_reached,speed):
     current_date =  str(date.today())

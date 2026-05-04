@@ -5,7 +5,7 @@ Documentation=https://github.com/Ndukiye/bandwidth-guard
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 /home/ndukiye/Documents/Workspace/Python-work/Bandwith-Guard/src/monitor.py
+ExecStart=/opt/bandwidth-guard/venv/bin/python /opt/bandwidth-guard/src/monitor.py
 WorkingDirectory=/home/ndukiye/Documents/Workspace/Python-work/Bandwith-Guard
 Restart=always
 RestartSec=10

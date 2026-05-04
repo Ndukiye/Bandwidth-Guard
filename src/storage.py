@@ -1,21 +1,25 @@
 import json
-from pathlib import Path
 from datetime import date, timedelta
+import os
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-data_file_path = BASE_DIR / "storage/data.json"
-presets_file_path = BASE_DIR / "storage/user-presets.json"
-multi_process_tracker_path = BASE_DIR / "storage/multi_tracker_history.json"  # Renamed
+DATA_DIR = "/var/lib/bandwidth-guard"
+os.makedirs(DATA_DIR, exist_ok=True) 
+
+data_file_path = os.path.join(DATA_DIR, "data.json")
+multi_process_tracker_path = os.path.join(DATA_DIR, "multi_tracker_history.json")
 
 # Initialize files
-paths = [data_file_path, presets_file_path, multi_process_tracker_path]
+paths = [data_file_path, multi_process_tracker_path]
 for path in paths:
     try:
         with open(path, "r") as file:
             json.load(file)
     except (FileNotFoundError, json.JSONDecodeError):
         with open(path, "w") as file:
-            json.dump({}, file)  # Empty dict for history
+            if path == multi_process_tracker_path:
+                json.dump({}, file)  # Empty dict for history
+            else:
+                json.dump([], file)  # Empty dict for history
 
 # === System-wide tracking (original monitor.py) ===
 

@@ -1,14 +1,15 @@
 import yaml
 from pathlib import Path
+import os
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+CONFIG_PATH = "/var/lib/bandwidth-guard/config.yaml"
+os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
+
 
 def load_enforcement_config():
-    #Load process limit configuration from YAML
-    config_path = BASE_DIR / "config.yaml"
-    
+    #Load process limit configuration from YAML 
     try:
-        with open(config_path, 'r') as f:
+        with open(CONFIG_PATH, 'r') as f:
             config = yaml.safe_load(f)
         return config or {}
     except FileNotFoundError:
@@ -19,10 +20,9 @@ def load_enforcement_config():
         }
 
 def save_limit_config(config):
-    #Save config back to YAML
-    config_path = BASE_DIR / "config.yaml"
+    #Save config back to YAML   
     
-    with open(config_path, 'w') as f:
+    with open(CONFIG_PATH, 'w') as f:
         yaml.dump(config, f, default_flow_style=False)
 
 

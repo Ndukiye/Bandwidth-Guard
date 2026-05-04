@@ -1,6 +1,6 @@
 global:
-  daily_limit_mb: 100
-  data_plan: 500mb
+  daily_limit_mb: 1
+  data_plan: '200'
 processes: {}
 whitelist:
 - sshd
