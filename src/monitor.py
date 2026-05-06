@@ -76,7 +76,7 @@ def normalize_bpftrace_line(line):
     pid = int(line.split("]")[0].split("[")[1].split(",")[0])
     comm = line.split("]")[0].split("[")[1].split(",")[1].strip()
     mb_used = int(line.split(":")[1]) / (1024 * 1024)
-
+    print(pid,comm,mb_used)
     try: 
         proc = psutil.Process(pid)
         owner = get_process_owner(pid)
@@ -159,7 +159,7 @@ async def main_multi_process_tracker():
             increment_process_data(
                 line_data["name"],
                 float(line_data["megabytes"]),
-            "   recv"
+                "recv"
             )
             # Check enforcement after updating
             check_and_enforce(line_data["name"])
