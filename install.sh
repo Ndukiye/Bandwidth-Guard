@@ -1,21 +1,28 @@
 #!/bin/bash
-# install.sh - Install Bandwidth Guard monitoring daemon and CLI
+# install.sh - Bandwidth Guard installer (daemon + CLI)
 
-set -e
+set -euo pipefail
 
 echo "=== Bandwidth Guard Installer ==="
 echo ""
 
-# Check if running as root
+# -----------------------------
+# Root check
+# -----------------------------
 if [ "$EUID" -ne 0 ]; then 
     echo "ERROR: This script must be run with sudo"
-    echo "Usage: sudo ./install.sh"
+    echo "Usage: curl -fsSL <url> | sudo bash"
     exit 1
 fi
 
-# Detect architecture
+# -----------------------------
+# Config
+# -----------------------------
+REPO="https://github.com/Ndukiye/Bandwith-Guard"
+INSTALL_DIR="/opt/bandwidth-guard"
+
 ARCH=$(uname -m)
-case $ARCH in
+case "$ARCH" in
     x86_64)
         SNAP_ARCH="amd64"
         ;;
@@ -28,43 +35,60 @@ case $ARCH in
         ;;
 esac
 
-# Install system dependencies
+# -----------------------------
+# Clone repo (CRITICAL FIX)
+# -----------------------------
+echo "[0/9] Cloning repository..."
+rm -rf "$INSTALL_DIR"
+git clone "$REPO" "$INSTALL_DIR"
+cd "$INSTALL_DIR"
+
+# -----------------------------
+# Dependencies
+# -----------------------------
 echo "[1/9] Installing system dependencies..."
 apt-get update -qq
-apt-get install -y bpftrace python3 python3-pip python3-venv snapd wget 2>/dev/null
+apt-get install -y bpftrace python3 python3-pip python3-venv snapd wget git >/dev/null
 echo "✓ Dependencies installed"
 
-# Create data directory
+# -----------------------------
+# Data directory
+# -----------------------------
 echo "[2/9] Creating data directory..."
 mkdir -p /var/lib/bandwidth-guard
 chmod 755 /var/lib/bandwidth-guard
-echo "✓ Created /var/lib/bandwidth-guard"
+echo "✓ Data directory ready"
 
+# -----------------------------
 # Install daemon files
+# -----------------------------
 echo "[3/9] Installing daemon files..."
+
 INSTALL_DIR="/opt/bandwidth-guard"
-mkdir -p $INSTALL_DIR/src
-mkdir -p $INSTALL_DIR/scripts
 
-# Copy daemon source files
-cp src/monitor.py $INSTALL_DIR/src/
-cp src/enforcer.py $INSTALL_DIR/src/
-cp src/storage.py $INSTALL_DIR/src/
-cp src/config_loader.py $INSTALL_DIR/src/
-cp scripts/network_tracker.bt $INSTALL_DIR/scripts/
-echo "✓ Installed daemon files"
+mkdir -p "$INSTALL_DIR/src"
+mkdir -p "$INSTALL_DIR/scripts"
 
-# Create virtual environment
-echo "[4/9] Creating Python virtual environment..."
-python3 -m venv $INSTALL_DIR/venv
-$INSTALL_DIR/venv/bin/pip install -q --upgrade pip
-$INSTALL_DIR/venv/bin/pip install -q -r requirements.txt
-echo "✓ Virtual environment created"
+cp -r src/* "$INSTALL_DIR/src/"
+cp -r scripts/* "$INSTALL_DIR/scripts/"
 
-# Create default config
+echo "✓ Daemon files installed"
+
+# -----------------------------
+# Python environment
+# -----------------------------
+echo "[4/9] Creating Python environment..."
+python3 -m venv "$INSTALL_DIR/venv"
+"$INSTALL_DIR/venv/bin/pip" install -q --upgrade pip
+"$INSTALL_DIR/venv/bin/pip" install -q -r requirements.txt
+echo "✓ Python environment ready"
+
+# -----------------------------
+# Config
+# -----------------------------
 echo "[5/9] Setting up configuration..."
-if [ ! -f /var/lib/bandwidth-guard/config.yaml ]; then
-    cat > /var/lib/bandwidth-guard/config.yaml << 'EOF'
+
+cat > /var/lib/bandwidth-guard/config.yaml << 'EOF'
 global:
   daily_limit_mb: 5120
   data_plan: "Default Plan"
@@ -75,41 +99,42 @@ whitelist:
   - sshd
   - systemd
 EOF
-    echo "✓ Created default config"
-else
-    echo "✓ Config already exists (not overwriting)"
-fi
 
-# Initialize JSON files
+echo "✓ Config created"
+
+# -----------------------------
+# Data files
+# -----------------------------
 echo "[6/9] Initializing data files..."
-if [ ! -f /var/lib/bandwidth-guard/data.json ]; then
-    echo "[]" > /var/lib/bandwidth-guard/data.json
-fi
-if [ ! -f /var/lib/bandwidth-guard/multi_tracker_history.json ]; then
-    echo "{}" > /var/lib/bandwidth-guard/multi_tracker_history.json
-fi
+
+echo "[]" > /var/lib/bandwidth-guard/data.json
+echo "{}" > /var/lib/bandwidth-guard/multi_tracker_history.json
+
 chmod 644 /var/lib/bandwidth-guard/*.json
 chmod 644 /var/lib/bandwidth-guard/config.yaml
-echo "✓ Data files initialized"
 
-# Install systemd service
+echo "✓ Data initialized"
+
+# -----------------------------
+# systemd service
+# -----------------------------
 echo "[7/9] Installing systemd service..."
-cat > /etc/systemd/system/bandwidth-guard.service << 'EOF'
+
+cat > /etc/systemd/system/bandwidth-guard.service << EOF
 [Unit]
 Description=Bandwidth Guard - Network Usage Monitor
 After=network.target
-Documentation=https://github.com/Ndukiye/bandwidth-guard
+Documentation=$REPO
 
 [Service]
 Type=simple
-ExecStart=/opt/bandwidth-guard/venv/bin/python /opt/bandwidth-guard/src/monitor.py
-WorkingDirectory=/opt/bandwidth-guard
+ExecStart=$INSTALL_DIR/venv/bin/python $INSTALL_DIR/src/monitor.py
+WorkingDirectory=$INSTALL_DIR
 Restart=always
 RestartSec=10
 StandardOutput=journal
 StandardError=journal
 
-# Desktop notification support
 Environment="DISPLAY=:0"
 Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus"
 
@@ -119,60 +144,63 @@ EOF
 
 systemctl daemon-reload
 systemctl enable bandwidth-guard
-echo "✓ Service installed and enabled"
+echo "✓ Service installed"
 
+# -----------------------------
 # Start daemon
+# -----------------------------
 echo "[8/9] Starting daemon..."
+
 systemctl start bandwidth-guard
 sleep 2
 
 if ! systemctl is-active --quiet bandwidth-guard; then
-    echo "⚠ Warning: Daemon failed to start"
-    echo "Check logs with: journalctl -u bandwidth-guard -n 50"
+    echo "⚠ Daemon failed to start"
+    echo "Check logs: journalctl -u bandwidth-guard -n 50"
     exit 1
 fi
-echo "✓ Daemon started successfully"
 
-# Download and install snap
+echo "✓ Daemon running"
+
+# -----------------------------
+# Snap CLI install (fixed)
+# -----------------------------
 echo "[9/9] Installing CLI snap..."
 
-# Check if snap file exists locally (for offline install)
-if [ -f "bandwidth-guard_1.1_${SNAP_ARCH}.snap" ]; then
-    echo "Using local snap file..."
-    snap install --dangerous --classic bandwidth-guard_1.1_${SNAP_ARCH}.snap
+SNAP_NAME="bandwidth-guard_1.1_${SNAP_ARCH}.snap"
+RELEASE_URL="https://github.com/Ndukiye/Bandwith-Guard/releases/latest/download/$SNAP_NAME"
+
+TMP_SNAP="/tmp/bandwidth-guard.snap"
+
+if wget -q --spider "$RELEASE_URL"; then
+    echo "Downloading CLI snap..."
+    wget -q --show-progress "$RELEASE_URL" -O "$TMP_SNAP"
+    snap install --dangerous "$TMP_SNAP"
+    rm -f "$TMP_SNAP"
 else
-    # Download from GitHub releases
-    echo "Downloading latest snap from GitHub..."
-    RELEASE_URL="https://github.com/Ndukiye/bandwidth-guard/releases/latest/download/bandwidth-guard_1.1_${SNAP_ARCH}.snap"
-    
-    if wget -q --spider "$RELEASE_URL"; then
-        wget -q --show-progress "$RELEASE_URL" -O /tmp/bandwidth-guard.snap
-        snap install --dangerous --classic /tmp/bandwidth-guard.snap
-        rm /tmp/bandwidth-guard.snap
-    else
-        echo "⚠ Could not download snap from GitHub releases"
-        echo "Please download manually from: https://github.com/Ndukiye/bandwidth-guard/releases"
-        echo "Then run: sudo snap install bandwidth-guard_1.1_${SNAP_ARCH}.snap --dangerous --classic"
-    fi
+    echo "⚠ Could not download snap from GitHub Releases"
+    echo "Manual install:"
+    echo "$RELEASE_URL"
 fi
 
-# Set alias
 snap alias bandwidth-guard bwguard 2>/dev/null || true
 echo "✓ CLI installed"
 
+# -----------------------------
+# Done
+# -----------------------------
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "✓ Installation complete!"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "Daemon status:"
-systemctl status bandwidth-guard --no-pager --lines=5
-echo ""
-echo "Test it:"
+
+echo "Test command:"
 echo "  bwguard status"
 echo ""
+
 echo "Useful commands:"
-echo "  • View logs: journalctl -u bandwidth-guard -f"
-echo "  • Restart: sudo systemctl restart bandwidth-guard"
-echo "  • Stop: sudo systemctl stop bandwidth-guard"
+echo "  journalctl -u bandwidth-guard -f"
+echo "  sudo systemctl restart bandwidth-guard"
+echo "  sudo systemctl stop bandwidth-guard"
 echo ""
