@@ -1,16 +1,25 @@
-#monitor.py
+# monitor.py (TOP OF FILE)
 import socket
 from datetime import date
-from storage import update_storage,get_bandwith_data
+from storage import update_storage, get_bandwith_data
 import psutil
 from collections import defaultdict
 from storage import get_today_usage, update_today_usage
 from config_loader import load_enforcement_config
-from enforcer import enforce_limit,check_cap
+from enforcer import enforce_limit, check_cap
 from pathlib import Path
 import asyncio
-BASE_DIR = Path(__file__).resolve().parent.parent
+import sys
+import os
 
+# CRITICAL FIX: Add src directory to Python path
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, SCRIPT_DIR)
+
+# Point to scripts directory
+BASE_DIR = os.path.dirname(SCRIPT_DIR)  # /opt/bandwidth-guard
+
+# Rest of your code...
 
 def is_connected():
     try:
@@ -120,9 +129,10 @@ def check_and_enforce(process_name):
 
 async def main_multi_process_tracker():
     # Run bpftrace script for tracking
+    bt_script = os.path.join(BASE_DIR, 'scripts', 'network_tracker.bt')
     process = await asyncio.create_subprocess_exec(
         'bpftrace',
-        BASE_DIR / 'scripts/network_tracker.bt',
+        bt_script,
         stdout=asyncio.subprocess.PIPE,
     )
 

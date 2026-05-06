@@ -1,44 +1,48 @@
+# storage.py (FIXED)
 import json
 from datetime import date, timedelta
 import os
 
+# ALWAYS use /var/lib/bandwidth-guard for daemon
+# Snap will read from here, daemon will write to here
 DATA_DIR = "/var/lib/bandwidth-guard"
-os.makedirs(DATA_DIR, exist_ok=True) 
 
 data_file_path = os.path.join(DATA_DIR, "data.json")
 multi_process_tracker_path = os.path.join(DATA_DIR, "multi_tracker_history.json")
 
-# Initialize files
-paths = [data_file_path, multi_process_tracker_path]
-for path in paths:
-    try:
-        with open(path, "r") as file:
-            json.load(file)
-    except (FileNotFoundError, json.JSONDecodeError):
-        with open(path, "w") as file:
-            if path == multi_process_tracker_path:
-                json.dump({}, file)  # Empty dict for history
-            else:
-                json.dump([], file)  # Empty dict for history
+# Initialize files if they don't exist
+# (This will only run when daemon starts, snap just reads)
+# os.makedirs(DATA_DIR, exist_ok=True)
 
-# === System-wide tracking (original monitor.py) ===
+# paths = [data_file_path, multi_process_tracker_path]
+# for path in paths:
+#     try:
+#         with open(path, "r") as file:
+#             json.load(file)
+#     except (FileNotFoundError, json.JSONDecodeError):
+#         with open(path, "w") as file:
+#             if path == multi_process_tracker_path:
+#                 json.dump({}, file)
+#             else:
+#                 json.dump([], file)
 
+# === System-wide tracking ===
 def update_storage(new_data):
     with open(data_file_path, "w") as file:
         json.dump(new_data, file, indent=4)
 
 def get_bandwith_data():
-    with open(data_file_path, "r") as file:
-        return json.load(file)
+    try:
+        with open(data_file_path, "r") as file:
+            return json.load(file)
+    except FileNotFoundError:
+        return []
 
-# === Per-process history tracking ===
-
+# === Per-process history ===
 def get_today_str():
-    """Get today's date as string"""
     return str(date.today())
 
 def load_history():
-    """Load entire history"""
     try:
         with open(multi_process_tracker_path, "r") as file:
             return json.load(file)
@@ -46,30 +50,24 @@ def load_history():
         return {}
 
 def save_history(history):
-    """Save entire history"""
     with open(multi_process_tracker_path, "w") as file:
         json.dump(history, file, indent=4)
 
 def get_today_usage():
-    """Get today's per-process usage"""
     history = load_history()
     today = get_today_str()
     return history.get(today, {})
 
 def update_today_usage(process_name, send_mb, recv_mb):
-    """Update usage for a specific process today"""
     history = load_history()
     today = get_today_str()
     
-    # Initialize today if doesn't exist
     if today not in history:
         history[today] = {}
     
-    # Initialize process if doesn't exist
     if process_name not in history[today]:
         history[today][process_name] = {"send": 0, "recv": 0, "total": 0}
     
-    # Update values
     history[today][process_name]["send"] = send_mb
     history[today][process_name]["recv"] = recv_mb
     history[today][process_name]["total"] = send_mb + recv_mb
@@ -77,16 +75,6 @@ def update_today_usage(process_name, send_mb, recv_mb):
     save_history(history)
 
 def get_date_range_usage(start_date, end_date):
-    """
-    Get usage across date range
-    
-    Args:
-        start_date: datetime.date object
-        end_date: datetime.date object
-    
-    Returns:
-        dict: Aggregated usage per process
-    """
     history = load_history()
     aggregated = {}
     
@@ -108,11 +96,9 @@ def get_date_range_usage(start_date, end_date):
     return aggregated
 
 def cleanup_old_history(days_to_keep=30):
-    """Remove history older than X days"""
     history = load_history()
     cutoff_date = date.today() - timedelta(days=days_to_keep)
     
-    # Filter out old dates
     cleaned = {
         date_str: data
         for date_str, data in history.items()

@@ -1,12 +1,30 @@
 name: bandwidth-guard
-version: '1.0'
-summary: eBPF bandwidth monitoring
+version: '1.1'
+summary: eBPF bandwidth monitoring CLI
 description: |
-  Monitor network bandwidth per process using eBPF.
-  Requires daemon installed separately via install.sh.
+  CLI tool for viewing and managing bandwidth usage tracked by the 
+  Bandwidth Guard monitoring daemon.
+  
+  REQUIRES CLASSIC CONFINEMENT:
+  This snap needs classic confinement to access /var/lib/bandwidth-guard/
+  where the systemd monitoring daemon (installed separately) writes 
+  real-time bandwidth data. The CLI reads this shared data directory 
+  to display usage statistics and manage enforcement limits.
+  
+  The snap does not perform any privileged operations - it only reads
+  and writes configuration/data files in /var/lib/bandwidth-guard/.
+  
+  Installation:
+  1. Install daemon: git clone repo, run sudo ./install.sh
+  2. Install this snap: sudo snap install bandwidth-guard --classic
+  3. View usage: bandwidth-guard status
+
 title: Bandwidth Guard
 license: MIT
 contact: orukariandukiye@gmail.com
+issues: https://github.com/Ndukiye/bandwidth-guard/issues
+source-code: https://github.com/Ndukiye/bandwidth-guard
+
 grade: stable
 confinement: classic
 base: core22
@@ -14,6 +32,7 @@ base: core22
 apps:
   bwguard:
     command: venv/bin/python $SNAP/src/main.py
+
   bandwidth-guard:
     command: venv/bin/python $SNAP/src/main.py
     aliases:

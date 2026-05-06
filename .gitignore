@@ -16,3 +16,13 @@ storage
 
 # OS junk
 .DS_Store
+
+# Snap / build artifacts
+*.snap
+*.tar.gz
+*.zip
+
+# build folders
+parts/
+stage/
+prime/

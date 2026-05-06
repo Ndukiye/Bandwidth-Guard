@@ -1,9 +1,9 @@
 #!/bin/bash
-# install.sh - Install Bandwidth Guard monitoring daemon
+# install.sh - Install Bandwidth Guard monitoring daemon and CLI
 
 set -e
 
-echo "=== Bandwidth Guard Daemon Installer ==="
+echo "=== Bandwidth Guard Installer ==="
 echo ""
 
 # Check if running as root
@@ -13,29 +13,35 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-# Check if bpftrace is available
-echo "[1/7] Checking dependencies..."
-if ! command -v bpftrace &> /dev/null; then
-    echo "Installing bpftrace..."
-    apt-get update
-    apt-get install -y bpftrace
-else
-    echo "✓ bpftrace already installed"
-fi
+# Detect architecture
+ARCH=$(uname -m)
+case $ARCH in
+    x86_64)
+        SNAP_ARCH="amd64"
+        ;;
+    aarch64)
+        SNAP_ARCH="arm64"
+        ;;
+    *)
+        echo "Unsupported architecture: $ARCH"
+        exit 1
+        ;;
+esac
 
-# Install Python dependencies
-echo "[2/7] Installing Python dependencies..."
-python3 -m venv /opt/bandwidth-guard/venv
-/opt/bandwidth-guard/venv/bin/pip install -r requirements.txt
+# Install system dependencies
+echo "[1/9] Installing system dependencies..."
+apt-get update -qq
+apt-get install -y bpftrace python3 python3-pip python3-venv snapd wget 2>/dev/null
+echo "✓ Dependencies installed"
 
 # Create data directory
-echo "[3/7] Creating data directory..."
+echo "[2/9] Creating data directory..."
 mkdir -p /var/lib/bandwidth-guard
 chmod 755 /var/lib/bandwidth-guard
 echo "✓ Created /var/lib/bandwidth-guard"
 
 # Install daemon files
-echo "[4/7] Installing daemon files..."
+echo "[3/9] Installing daemon files..."
 INSTALL_DIR="/opt/bandwidth-guard"
 mkdir -p $INSTALL_DIR/src
 mkdir -p $INSTALL_DIR/scripts
@@ -46,11 +52,17 @@ cp src/enforcer.py $INSTALL_DIR/src/
 cp src/storage.py $INSTALL_DIR/src/
 cp src/config_loader.py $INSTALL_DIR/src/
 cp scripts/network_tracker.bt $INSTALL_DIR/scripts/
+echo "✓ Installed daemon files"
 
-echo "✓ Installed to $INSTALL_DIR"
+# Create virtual environment
+echo "[4/9] Creating Python virtual environment..."
+python3 -m venv $INSTALL_DIR/venv
+$INSTALL_DIR/venv/bin/pip install -q --upgrade pip
+$INSTALL_DIR/venv/bin/pip install -q -r requirements.txt
+echo "✓ Virtual environment created"
 
 # Create default config
-echo "[5/7] Setting up configuration..."
+echo "[5/9] Setting up configuration..."
 if [ ! -f /var/lib/bandwidth-guard/config.yaml ]; then
     cat > /var/lib/bandwidth-guard/config.yaml << 'EOF'
 global:
@@ -68,38 +80,96 @@ else
     echo "✓ Config already exists (not overwriting)"
 fi
 
+# Initialize JSON files
+echo "[6/9] Initializing data files..."
+if [ ! -f /var/lib/bandwidth-guard/data.json ]; then
+    echo "[]" > /var/lib/bandwidth-guard/data.json
+fi
+if [ ! -f /var/lib/bandwidth-guard/multi_tracker_history.json ]; then
+    echo "{}" > /var/lib/bandwidth-guard/multi_tracker_history.json
+fi
+chmod 644 /var/lib/bandwidth-guard/*.json
+chmod 644 /var/lib/bandwidth-guard/config.yaml
+echo "✓ Data files initialized"
+
 # Install systemd service
-echo "[6/7] Installing systemd service..."
-cp scripts/bandwidth-guard.service /etc/systemd/system/
+echo "[7/9] Installing systemd service..."
+cat > /etc/systemd/system/bandwidth-guard.service << 'EOF'
+[Unit]
+Description=Bandwidth Guard - Network Usage Monitor
+After=network.target
+Documentation=https://github.com/Ndukiye/bandwidth-guard
+
+[Service]
+Type=simple
+ExecStart=/opt/bandwidth-guard/venv/bin/python /opt/bandwidth-guard/src/monitor.py
+WorkingDirectory=/opt/bandwidth-guard
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Desktop notification support
+Environment="DISPLAY=:0"
+Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus"
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
 systemctl daemon-reload
 systemctl enable bandwidth-guard
 echo "✓ Service installed and enabled"
 
-# Start service
-echo "[7/7] Starting daemon..."
+# Start daemon
+echo "[8/9] Starting daemon..."
 systemctl start bandwidth-guard
 sleep 2
 
-# Check status
-if systemctl is-active --quiet bandwidth-guard; then
-    echo "✓ Daemon started successfully"
-else
+if ! systemctl is-active --quiet bandwidth-guard; then
     echo "⚠ Warning: Daemon failed to start"
-    echo "Check logs: journalctl -u bandwidth-guard -n 50"
+    echo "Check logs with: journalctl -u bandwidth-guard -n 50"
+    exit 1
 fi
+echo "✓ Daemon started successfully"
+
+# Download and install snap
+echo "[9/9] Installing CLI snap..."
+
+# Check if snap file exists locally (for offline install)
+if [ -f "bandwidth-guard_1.1_${SNAP_ARCH}.snap" ]; then
+    echo "Using local snap file..."
+    snap install --dangerous --classic bandwidth-guard_1.1_${SNAP_ARCH}.snap
+else
+    # Download from GitHub releases
+    echo "Downloading latest snap from GitHub..."
+    RELEASE_URL="https://github.com/Ndukiye/bandwidth-guard/releases/latest/download/bandwidth-guard_1.1_${SNAP_ARCH}.snap"
+    
+    if wget -q --spider "$RELEASE_URL"; then
+        wget -q --show-progress "$RELEASE_URL" -O /tmp/bandwidth-guard.snap
+        snap install --dangerous --classic /tmp/bandwidth-guard.snap
+        rm /tmp/bandwidth-guard.snap
+    else
+        echo "⚠ Could not download snap from GitHub releases"
+        echo "Please download manually from: https://github.com/Ndukiye/bandwidth-guard/releases"
+        echo "Then run: sudo snap install bandwidth-guard_1.1_${SNAP_ARCH}.snap --dangerous --classic"
+    fi
+fi
+
+# Set alias
+snap alias bandwidth-guard bwguard 2>/dev/null || true
+echo "✓ CLI installed"
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "✓ Installation complete!"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "Status:"
+echo "Daemon status:"
 systemctl status bandwidth-guard --no-pager --lines=5
 echo ""
-echo "Next steps:"
-echo "  1. Install CLI snap: sudo snap install bandwidth-guard --classic"
-echo "  2. View usage: bwguard status"
-echo "  3. Set limits: bwguard set-limit firefox 2048"
+echo "Test it:"
+echo "  bwguard status"
 echo ""
 echo "Useful commands:"
 echo "  • View logs: journalctl -u bandwidth-guard -f"

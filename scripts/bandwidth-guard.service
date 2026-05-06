@@ -1,12 +1,12 @@
 [Unit]
-Description=Bandwidth Guardian - Network Usage Monitor
+Description=Bandwidth Guard - Network Usage Monitor
 After=network.target
 Documentation=https://github.com/Ndukiye/bandwidth-guard
 
 [Service]
 Type=simple
 ExecStart=/opt/bandwidth-guard/venv/bin/python /opt/bandwidth-guard/src/monitor.py
-WorkingDirectory=/home/ndukiye/Documents/Workspace/Python-work/Bandwith-Guard
+WorkingDirectory=/opt/bandwidth-guard
 Restart=always
 RestartSec=10
 StandardOutput=journal
@@ -15,7 +15,6 @@ StandardError=journal
 # Desktop notification support
 Environment="DISPLAY=:0"
 Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus"
-
 
 [Install]
 WantedBy=multi-user.target
