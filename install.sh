@@ -144,7 +144,7 @@ echo "Downloading CLI from GitHub releases..."
 
 if wget -O "$TMP_SNAP" "$RELEASE_URL"; then
     if [ -s "$TMP_SNAP" ]; then
-        snap install --dangerous "$TMP_SNAP"
+        snap install --dangerous --classic "$TMP_SNAP"
         echo "✓ Snap installed"
     else
         echo "❌ Snap download empty"
