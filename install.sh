@@ -94,7 +94,7 @@ echo "✓ Python environment ready"
 echo "[4/7] Installing systemd services..."
 
 SERVICE_FILE="$INSTALL_DIR/scripts/bandwidth-guard.service"
-TIMER_FILE="$INSTALL_DIR/scripts/bwguard-timer.service"
+TIMER_FILE="$INSTALL_DIR/scripts/bwguard.timer"
 
 # Validate files exist
 if [ ! -f "$SERVICE_FILE" ]; then
@@ -111,14 +111,14 @@ fi
 install -Dm644 "$SERVICE_FILE" /etc/systemd/system/bandwidth-guard.service
 
 # Install timer file (proper systemd deployment)
-install -Dm644 "$TIMER_FILE" /etc/systemd/system/bwguard-timer.service
+install -Dm644 "$TIMER_FILE" /etc/systemd/system/bwguard.timer
 
 # Reload systemd so it sees new units
 systemctl daemon-reload
 
 # Enable services
 systemctl enable bandwidth-guard.service
-systemctl enable bwguard-timer.service
+systemctl enable bwguard.timer
 
 echo "✓ Service + Timer installed"
 
@@ -143,7 +143,7 @@ fi
 echo "✓ Daemon running"
 
 # Optional: verify timer is enabled
-if ! systemctl is-enabled --quiet bwguard-timer.service; then
+if ! systemctl is-enabled --quiet bwguard.timer; then
     echo "⚠️ Warning: timer is not enabled"
 else
     echo "✓ Timer enabled"
