@@ -151,7 +151,6 @@ def enforce_limit(process_name, usage_mb, limit_mb, action="kill"):
         reset_notification_state(process_name)
 
 #enforce global limit
-# enforcer.py - REPLACE check_cap()
 
 def check_cap(total_mb):
     config = load_enforcement_config()
