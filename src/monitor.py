@@ -1,4 +1,4 @@
-# monitor.py (TOP OF FILE)
+# monitor.py
 import socket
 from datetime import date
 from storage import update_storage, get_bandwith_data
@@ -73,6 +73,9 @@ def increment_process_data(process_name, usage, type):
 
 def normalize_bpftrace_line(line):
     #Parse bpftrace output line
+    #line example: 
+    # @send_bytes[60852, Chrome_ChildIOT]: 110
+    # @recv_bytes[60692, Core Thread]: 500
     pid = int(line.split("]")[0].split("[")[1].split(",")[0])
     comm = line.split("]")[0].split("[")[1].split(",")[1].strip()
     mb_used = int(line.split(":")[1]) / (1024 * 1024)

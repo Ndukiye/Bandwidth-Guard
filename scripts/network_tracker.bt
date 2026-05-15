@@ -12,7 +12,7 @@ kprobe:tcp_recvmsg
 
 kprobe:udp_sendmsg
 {
-    @send_bytes[pid,comm]+=arg2;54
+    @send_bytes[pid,comm]+=arg2;
 }
 
 kprobe:udp_recvmsg

@@ -62,14 +62,20 @@ apt-get install -y \
 echo "✓ Dependencies installed"
 
 # -----------------------------
-# Data directory
+# Data directory (with snap write access)
 # -----------------------------
 echo "[2/7] Creating data directory..."
 
 mkdir -p /var/lib/bandwidth-guard
-chmod 755 /var/lib/bandwidth-guard
 
-echo "✓ Data directory ready"
+# Get the actual user (not root)
+ACTUAL_USER="${SUDO_USER:-$USER}"
+
+# Allow user write access
+chown -R "$ACTUAL_USER:$ACTUAL_USER" /var/lib/bandwidth-guard
+chmod -R 755 /var/lib/bandwidth-guard
+
+echo "✓ Data directory ready (accessible by $ACTUAL_USER)"
 
 # -----------------------------
 # Python environment
