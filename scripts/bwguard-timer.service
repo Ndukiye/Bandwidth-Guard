@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily restart of Bandwidth Guard
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+Unit=bandwidth-guard.service
+
+[Install]
+WantedBy=timers.target

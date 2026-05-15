@@ -1,4 +1,4 @@
-# main.py - handles user interaction
+# handles user interaction
 import argparse
 from rich.console import Console
 

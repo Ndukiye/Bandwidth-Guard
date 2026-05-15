@@ -1,4 +1,3 @@
-#cli.py
 from datetime import date, timedelta
 from rich.console import Console
 from rich.table import Table

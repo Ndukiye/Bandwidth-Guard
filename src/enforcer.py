@@ -1,4 +1,3 @@
-#enforcer.py
 import psutil
 import subprocess
 import time 

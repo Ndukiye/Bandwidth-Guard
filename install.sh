@@ -89,52 +89,65 @@ python3 -m venv venv
 echo "✓ Python environment ready"
 
 # -----------------------------
-# systemd service
+# systemd services
 # -----------------------------
-echo "[4/7] Installing systemd service..."
+echo "[4/7] Installing systemd services..."
 
-cat > /etc/systemd/system/bandwidth-guard.service << EOF
-[Unit]
-Description=Bandwidth Guard - Network Usage Monitor
-After=network.target
-Documentation=$REPO
+SERVICE_FILE="$INSTALL_DIR/scripts/bandwidth-guard.service"
+TIMER_FILE="$INSTALL_DIR/scripts/bwguard-timer.service"
 
-[Service]
-Type=simple
-ExecStart=$INSTALL_DIR/venv/bin/python $INSTALL_DIR/src/monitor.py
-WorkingDirectory=$INSTALL_DIR
-Restart=always
-RestartSec=10
-StandardOutput=journal
-StandardError=journal
+# Validate files exist
+if [ ! -f "$SERVICE_FILE" ]; then
+    echo "❌ Missing service file: $SERVICE_FILE"
+    exit 1
+fi
 
-Environment="DISPLAY=:0"
-Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus"
+if [ ! -f "$TIMER_FILE" ]; then
+    echo "❌ Missing timer file: $TIMER_FILE"
+    exit 1
+fi
 
-[Install]
-WantedBy=multi-user.target
-EOF
+# Install service file (proper systemd deployment)
+install -Dm644 "$SERVICE_FILE" /etc/systemd/system/bandwidth-guard.service
 
+# Install timer file (proper systemd deployment)
+install -Dm644 "$TIMER_FILE" /etc/systemd/system/bwguard-timer.service
+
+# Reload systemd so it sees new units
 systemctl daemon-reload
-systemctl enable bandwidth-guard
 
-echo "✓ Service installed"
+# Enable services
+systemctl enable bandwidth-guard.service
+systemctl enable bwguard-timer.service
+
+echo "✓ Service + Timer installed"
 
 # -----------------------------
 # Start daemon
 # -----------------------------
 echo "[5/7] Starting daemon..."
 
-systemctl start bandwidth-guard
+# Start service (immediate run)
+systemctl start bandwidth-guard.service
+
+# Small delay to allow initialization
 sleep 2
 
-if ! systemctl is-active --quiet bandwidth-guard; then
+# Check service status
+if ! systemctl is-active --quiet bandwidth-guard.service; then
     echo "❌ Daemon failed to start"
-    echo "Run: journalctl -u bandwidth-guard -n 50"
+    echo "Run: journalctl -u bandwidth-guard.service -n 50"
     exit 1
 fi
 
 echo "✓ Daemon running"
+
+# Optional: verify timer is enabled
+if ! systemctl is-enabled --quiet bwguard-timer.service; then
+    echo "⚠️ Warning: timer is not enabled"
+else
+    echo "✓ Timer enabled"
+fi
 
 # -----------------------------
 # CLI install (Snap)

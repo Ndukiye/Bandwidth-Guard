@@ -1,4 +1,3 @@
-# monitor.py
 import socket
 from datetime import date
 from storage import update_storage, get_bandwith_data
@@ -12,14 +11,11 @@ import asyncio
 import sys
 import os
 
-# CRITICAL FIX: Add src directory to Python path
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, SCRIPT_DIR)
 
 # Point to scripts directory
 BASE_DIR = os.path.dirname(SCRIPT_DIR)  # /opt/bandwidth-guard
-
-# Rest of your code...
 
 def is_connected():
     try:
@@ -37,14 +33,14 @@ def save_bandwith_data(total_mb,cap_reached,speed):
         if  last_entry["date"] == current_date:
             last_entry["total_mb"] = float(f'{total_mb}')
             last_entry["usage_limit"] = cap_reached
-            last_entry["speed_mbps"] = float(f'{speed}')
+            last_entry["speed_mb"] = float(f'{speed}')
             update_storage(old_data)
         else:
-            new_data = {"date":current_date,"total_mb": float(f'{total_mb}'),"usage_limit":cap_reached,"speed_mbps":float(f'{speed}')}
+            new_data = {"date":current_date,"total_mb": float(f'{total_mb}'),"usage_limit":cap_reached,"speed_mb":float(f'{speed}')}
             old_data.append(new_data)
             update_storage(old_data)
     else:
-        new_data = {"date":current_date,"total_mb": float(f'{total_mb}'),"usage_limit":cap_reached,"speed_mbps":float(f'{speed}')}
+        new_data = {"date":current_date,"total_mb": float(f'{total_mb}'),"usage_limit":cap_reached,"speed_mb":float(f'{speed}')}
         old_data.append(new_data)
         update_storage(old_data)
 
@@ -59,6 +55,7 @@ proc_nd_usage = defaultdict(
         for process, metrics in get_today_usage().items()
     }
 )
+
 
 # Load enforcement config
 config = load_enforcement_config()
@@ -175,10 +172,10 @@ async def main_system_usage_tracker():
         old = psutil.net_io_counters().bytes_recv
         await asyncio.sleep(1)
         new = psutil.net_io_counters().bytes_recv
-        speed_mbps = (new-old)/1048576
+        speed_mb = (new-old)/1048576
         total_bytes+=(new-old)
         total_mb = total_bytes/1048576
-        save_bandwith_data(total_mb,check_cap(total_mb),speed_mbps)
+        save_bandwith_data(total_mb,check_cap(total_mb),speed_mb)
         # print(f'Used in last second: {total_bytes} bytes | Total today: {total_mb:.2f} MB')
 
 async def main():
