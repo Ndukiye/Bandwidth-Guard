@@ -11,7 +11,8 @@ multi_process_tracker_path = os.path.join(DATA_DIR, "multi_tracker_history.json"
 
 # Initialize files if they don't exist
 # (This will only run when daemon starts, snap just reads)
-os.makedirs(DATA_DIR, exist_ok=True)
+def init_storage():
+    os.makedirs(DATA_DIR, exist_ok=True)
 
 paths = [data_file_path, multi_process_tracker_path]
 for path in paths:
@@ -104,4 +105,3 @@ def cleanup_old_history(days_to_keep=30):
     }
     
     save_history(cleaned)
-

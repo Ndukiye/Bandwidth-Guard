@@ -2,7 +2,7 @@ import socket
 from datetime import date
 import psutil
 from collections import defaultdict
-from src.storage import get_today_usage, update_today_usage,update_storage, get_bandwith_data
+from src.storage import get_today_usage, update_today_usage,update_storage, get_bandwith_data,init_storage
 from src.config_loader import load_enforcement_config
 from src.enforcer import enforce_limit, check_cap
 from pathlib import Path
@@ -196,6 +196,7 @@ async def main_system_usage_tracker():
         # print(f'Used in last second: {total_bytes} bytes | Total today: {total_mb:.2f} MB')
 
 async def main():
+    init_storage()
     await asyncio.gather(
         main_multi_process_tracker(),
         main_system_usage_tracker()
