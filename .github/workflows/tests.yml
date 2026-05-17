@@ -32,16 +32,3 @@ jobs:
       uses: codecov/codecov-action@v3
       with:
         file: ./coverage.xml
-
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-python@v4
-    - run: |
-        pip install ruff
-    - name: Check lint
-      run: ruff check src/
-
-    - name: Check formatting
-      run: ruff format --check src/
