@@ -14,17 +14,17 @@ multi_process_tracker_path = os.path.join(DATA_DIR, "multi_tracker_history.json"
 def init_storage():
     os.makedirs(DATA_DIR, exist_ok=True)
 
-paths = [data_file_path, multi_process_tracker_path]
-for path in paths:
-    try:
-        with open(path, "r") as file:
-            json.load(file)
-    except (FileNotFoundError, json.JSONDecodeError):
-        with open(path, "w") as file:
-            if path == multi_process_tracker_path:
-                json.dump({}, file)
-            else:
-                json.dump([], file)
+    paths = [data_file_path, multi_process_tracker_path]
+    for path in paths:
+        try:
+            with open(path, "r") as file:
+              json.load(file)
+        except (FileNotFoundError, json.JSONDecodeError):
+            with open(path, "w") as file:
+                if path == multi_process_tracker_path:
+                    json.dump({}, file)
+                else:
+                    json.dump([], file)
 
 # === System-wide tracking ===
 def update_storage(new_data):
