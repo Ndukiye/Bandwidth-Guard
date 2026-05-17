@@ -1,11 +1,10 @@
 import socket
 from datetime import date
-from storage import update_storage, get_bandwith_data
 import psutil
 from collections import defaultdict
-from storage import get_today_usage, update_today_usage
-from config_loader import load_enforcement_config
-from enforcer import enforce_limit, check_cap
+from src.storage import get_today_usage, update_today_usage,update_storage, get_bandwith_data
+from src.config_loader import load_enforcement_config
+from src.enforcer import enforce_limit, check_cap
 from pathlib import Path
 import asyncio
 import sys
@@ -68,25 +67,43 @@ def increment_process_data(process_name, usage, type):
     recv_mb = proc_nd_usage[process_name]['recv']
     update_today_usage(process_name, send_mb, recv_mb)
 
+# monitor.py
 def normalize_bpftrace_line(line):
-    #Parse bpftrace output line
-    #line example: 
-    # @send_bytes[60852, Chrome_ChildIOT]: 110
-    # @recv_bytes[60692, Core Thread]: 500
-    pid = int(line.split("]")[0].split("[")[1].split(",")[0])
-    comm = line.split("]")[0].split("[")[1].split(",")[1].strip()
-    mb_used = int(line.split(":")[1]) / (1024 * 1024)
-    print(pid,comm,mb_used)
-    try: 
-        proc = psutil.Process(pid)
+    """
+    Parse bpftrace output line
+    
+    Args:
+        line: Bpftrace output like "@send_bytes[60852, Chrome_ChildIOT]: 110"
+    
+    Returns:
+        dict: {"megabytes": float, "name": str} or None if parse fails
+    """
+    try:
+        # Extract PID, comm name, and bytes
+        pid = int(line.split("]")[0].split("[")[1].split(",")[0])
+        comm = line.split("]")[0].split("[")[1].split(",")[1].strip()
+        mb_used = int(line.split(":")[1]) / (1024 * 1024)
+        
+        # Try to find parent process (for bundling children)
         owner = get_process_owner(pid)
+        
         if owner:
-            name = owner # Bundle into parent
+            name = owner
         else:
-            name = proc.name()  # Use own name
-    except (psutil.NoSuchProcess, psutil.AccessDenied):
-            name = comm
-    return {"megabytes": mb_used, "name": name}
+            # Try to get process name from psutil
+            try:
+                proc = psutil.Process(pid)
+                name = proc.name()
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                # Process died or permission denied, use comm name
+                name = comm
+        
+        return {"megabytes": mb_used, "name": name}
+    
+    except (IndexError, ValueError, AttributeError) as e:
+        # Malformed line, log and return None
+        print(f"[Error] Failed to parse line: {line} ({e})")
+        return None
 
 def get_process_owner(pid):
     MAJOR_APPS = {'firefox', 'chrome', 'spotify', 'code'}

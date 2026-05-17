@@ -1,7 +1,0 @@
-global:
-  daily_limit_mb: 1
-  data_plan: '200'
-processes: {}
-whitelist:
-- sshd
-- systemd

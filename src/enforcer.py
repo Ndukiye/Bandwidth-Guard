@@ -1,7 +1,7 @@
 import psutil
 import subprocess
 import time 
-from config_loader import load_enforcement_config
+from src.config_loader import load_enforcement_config
 import os
 MAJOR_APPS = {'firefox', 'chrome', 'spotify', 'code', 'teams'}
 
@@ -151,7 +151,6 @@ def enforce_limit(process_name, usage_mb, limit_mb, action="kill"):
         reset_notification_state(process_name)
 
 #enforce global limit
-
 def check_cap(total_mb):
     config = load_enforcement_config()
     global_config = config.get('global', {})

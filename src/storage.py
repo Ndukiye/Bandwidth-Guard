@@ -11,19 +11,19 @@ multi_process_tracker_path = os.path.join(DATA_DIR, "multi_tracker_history.json"
 
 # Initialize files if they don't exist
 # (This will only run when daemon starts, snap just reads)
-# os.makedirs(DATA_DIR, exist_ok=True)
+os.makedirs(DATA_DIR, exist_ok=True)
 
-# paths = [data_file_path, multi_process_tracker_path]
-# for path in paths:
-#     try:
-#         with open(path, "r") as file:
-#             json.load(file)
-#     except (FileNotFoundError, json.JSONDecodeError):
-#         with open(path, "w") as file:
-#             if path == multi_process_tracker_path:
-#                 json.dump({}, file)
-#             else:
-#                 json.dump([], file)
+paths = [data_file_path, multi_process_tracker_path]
+for path in paths:
+    try:
+        with open(path, "r") as file:
+            json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError):
+        with open(path, "w") as file:
+            if path == multi_process_tracker_path:
+                json.dump({}, file)
+            else:
+                json.dump([], file)
 
 # === System-wide tracking ===
 def update_storage(new_data):
@@ -60,7 +60,6 @@ def get_today_usage():
 def update_today_usage(process_name, send_mb, recv_mb):
     history = load_history()
     today = get_today_str()
-    
     if today not in history:
         history[today] = {}
     
@@ -105,3 +104,4 @@ def cleanup_old_history(days_to_keep=30):
     }
     
     save_history(cleaned)
+

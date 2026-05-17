@@ -7,7 +7,7 @@ from storage import (
     get_date_range_usage,
     get_bandwith_data,
 )
-from config_loader import save_limit_config,load_enforcement_config,set_data_plan
+from src.config_loader import save_limit_config,load_enforcement_config,set_data_plan
 
 
 console = Console()

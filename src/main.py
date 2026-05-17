@@ -2,7 +2,7 @@
 import argparse
 from rich.console import Console
 
-from cli import show_status,show_history,set_limit,remove_limit,clear_all_limits,list_limits,configure_plan
+from src.cli import show_status,show_history,set_limit,remove_limit,clear_all_limits,list_limits,configure_plan
 
 console = Console()
 
