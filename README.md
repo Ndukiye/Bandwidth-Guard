@@ -17,59 +17,82 @@ Monitor and enforce per-process network bandwidth limits on Linux using eBPF.
 
 ## Quick Install
 
+**One-line installer**
 ```bash
-One-line installer
 curl -fsSL https://raw.githubusercontent.com/Ndukiye/bandwidth-guard/main/install.sh | sudo bash
+```
+## Or manual installation:
 
-**Or manual installation:**
-
-```bash1. Download latest release
-wget https://github.com/Ndukiye/bandwidth-guard/releases/latest/download/bandwidth-guard-installer.tar.gz2. Extract and install
+**1. Download latest release**
+```bash
+wget https://github.com/Ndukiye/bandwidth-guard/releases/latest/download/bandwidth-guard-installer.tar.gz2.
+```
+**2. Extract and install**
+```bash
 tar -xzf bandwidth-guard-installer.tar.gz
 cd bandwidth-guard
 sudo ./install.sh
-
-**Test it:**
-```bashbwguard status
-
+```
+**3. Test it:**
+```bash
+bwguard status
+```
 ## Usage
 
-```bashView today's usage
-bwguard statusView last 30 days
-bwguard history --days 30Set Firefox limit (2GB/day, kill when exceeded)
-bwguard set-limit firefox 2048Set Spotify limit (500MB/day, warn only)
-bwguard set-limit spotify 500 --action warnList configured limits
-bwguard limitsRemove a limit
+**View today's usage**
+```bash
+bwguard status
+```
+**View last 30 days**
+```bash
+bwguard history --days 30
+```
+**Set Firefox limit (2GB/day, kill when exceeded)**
+```bash
+bwguard set-limit firefox 2048
+```
+**Set Spotify limit (500MB/day, warn only)**
+```bash
+bwguard set-limit spotify 500 --action warn
+```
+**List configured limits**
+```bash
+bwguard limits
+```
+**Remove a limit**
+```bash
 bwguard remove-limit firefox
-
-## How It Works┌─────────────────────────────────────────┐
+```
+## How It Works
+```bash
+┌─────────────────────────────────────────┐
 │  eBPF Hooks (bpftrace)                  │
 │  Kernel-level network tracking          │
 └────────────┬────────────────────────────┘
-│
-▼
+             │
+             ▼
 ┌─────────────────────────────────────────┐
 │  Systemd Daemon (monitor.py)            │
 │  • Aggregates per-process stats         │
 │  • Enforces limits (kill/warn)          │
 │  • Sends desktop notifications          │
 └────────────┬────────────────────────────┘
-│ Writes to
-▼
+             │ Writes to
+             ▼
 ┌─────────────────────────────────────────┐
 │  /var/lib/bandwidth-guard/              │
 │  • config.yaml                          │
 │  • data.json                            │
 │  • multi_tracker_history.json           │
 └────────────▲────────────────────────────┘
-│ Reads from
+             │ Reads from
 ┌────────────┴────────────────────────────┐
 │  CLI Snap (bwguard)                     │
 │  • View status                          │
 │  • Set limits                           │
 │  • View history                         │
 └─────────────────────────────────────────┘
-
+```
 ## Installation
 
 See [INSTALL.md](INSTALL.md) for detailed installation instructions.
